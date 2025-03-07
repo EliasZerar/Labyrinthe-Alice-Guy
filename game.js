@@ -10,23 +10,22 @@ class MenuScene extends Phaser.Scene {
     create() {
         const { width, height } = this.sys.game.config;
 
-        // Ajout du background centré et redimensionné pour couvrir l'écran
-        const bg = this.add.image(width / 2, height / 2, 'background');
-        bg.setDisplaySize(width, height); // Redimensionner l'image pour qu'elle remplisse l'écran
+        this.cameras.main.setBackgroundColor('#2c2c2a');
 
-        const title = this.add.text(width / 2, 200, 'Labyrinthe 2D', { font: '40px Arial', fill: '#fff' });
+        const title = this.add.text(width / 2, 200, 'Labyrinthe 2D', { font: '40px Arial', fill: '#ea5b28' });
         title.setOrigin(0.5);
 
-        const playButton = this.add.text(width / 2, 400, 'Jouer', { font: '30px Arial', fill: '#0f0' })
+        const playButton = this.add.text(width / 2, 400, 'Jouer', { font: '30px Arial', fill: '#fff' })
             .setInteractive()
             .setOrigin(0.5)
             .on('pointerdown', () => this.scene.start('GameScene'));
 
-        const settingsButton = this.add.text(width / 2, 500, 'Paramètres', { font: '30px Arial', fill: '#ff0' })
+        const settingsButton = this.add.text(width / 2, 500, 'Paramètres', { font: '30px Arial', fill: '#fff' })
             .setInteractive()
             .setOrigin(0.5)
             .on('pointerdown', () => this.scene.start('SettingsScene'));
-        const quitButton = this.add.text(width / 2, 600, 'Quitter', { font: '30px Arial', fill: '#f00' })
+
+        const quitButton = this.add.text(width / 2, 600, 'Quitter', { font: '30px Arial', fill: '#fff' })
             .setInteractive()
             .setOrigin(0.5)
             .on('pointerdown', () => this.quitGame());
