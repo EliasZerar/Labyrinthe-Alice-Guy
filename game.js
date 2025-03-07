@@ -40,6 +40,18 @@ class GameScene extends Phaser.Scene {
         this.grid = [];
         this.collectedObjects = 0;
         this.playerSpeed = 160;
+        this.totalObjects = 5;
+        this.doorMessageShown = false;
+    }
+
+    init() {
+        this.collectedObjects = 0;
+
+        // Remise à zéro des groupes
+        if (this.objects) this.objects.clear(true, true);
+        if (this.enemies) this.enemies.clear(true, true);
+        this.objects = this.physics.add.group(); // Ensure objects group is initialized
+        this.enemies = this.physics.add.group(); // Ensure enemies group is initialized
     }
 
     preload() {
@@ -55,7 +67,7 @@ class GameScene extends Phaser.Scene {
         this.hudScene = this.scene.get('HudScene'); // Reference to access it
         this.hudScene.reset();
 
-        const cols = 30, rows = 30, cellSize = 40;
+        const cols = 20, rows = 20, cellSize = 40;
         this.cols = cols;
         this.rows = rows;
         this.cellSize = cellSize;
@@ -65,9 +77,6 @@ class GameScene extends Phaser.Scene {
         this.lights.enable().setAmbientColor(0x000000);
 
         this.walls = this.physics.add.staticGroup();
-        this.objects = this.physics.add.group();
-        this.enemies = this.physics.add.group();
-
         this.grid = this.generateMaze(cols, rows);
 
         // Placement des murs parfaitement collés
@@ -85,33 +94,31 @@ class GameScene extends Phaser.Scene {
             }
         }
 
-
         this.player = this.physics.add.sprite(cellSize, cellSize, 'player').setScale(0.7).setOrigin((-0.5)).setPipeline('Light2D');
         this.physics.add.collider(this.player, this.walls);
 
-        this.placeObjects(5).forEach(pos => {
+        this.placeObjects(this.totalObjects).forEach(pos => {
             this.objects.create(pos.x * cellSize + cellSize / 2, pos.y * cellSize + cellSize / 2, 'object').setScale(0.05).setPipeline('Light2D');
         });
 
-        let exitPos = this.placeObjects(1)[0];
-        this.exit = this.physics.add.staticSprite(exitPos.x * cellSize + cellSize / 2, exitPos.y * cellSize + cellSize / 2, 'exit').setScale(0.06).setPipeline('Light2D');
 
-        this.spawnEnemies();
+        let exitPos = this.placeObjects(1)[0];
+        this.exit = this.physics.add.sprite(exitPos.x * cellSize + cellSize / 2, exitPos.y * cellSize + cellSize / 2, 'exit').setScale(0.06).setPipeline('Light2D');
+        this.exit.body.setSize(cellSize, cellSize); // Set hitbox for the exit
+        this.exit.setAlpha(0); // Make the exit invisible initially
+
+        this.spawnEnemies(5);
 
         this.playerLight = this.lights.addLight(this.player.x, this.player.y, 150).setColor(0xffffff).setIntensity(1);
-
-
-
 
         this.cameras.main.startFollow(this.player);
         this.cameras.main.setZoom(2);
         this.cameras.main.setBounds(0, 0, cols * cellSize, rows * cellSize);
 
         this.physics.add.overlap(this.player, this.objects, this.collectObject, null, this);
-
         this.physics.add.collider(this.enemies, this.walls, this.handleEnemyWallCollision, null, this);
-
         this.physics.add.overlap(this.player, this.enemies, this.playerHitEnemy, null, this);
+        this.physics.add.overlap(this.player, this.exit, this.reachExit, null, this); // Add overlap with exit
     }
 
     update() {
@@ -128,15 +135,15 @@ class GameScene extends Phaser.Scene {
 
         this.enemies.getChildren().forEach(enemy => this.moveEnemy(enemy));
 
-        if (this.collectedObjects === 7) {
-            this.exit.setAlpha(1);
+        if (this.collectedObjects === this.totalObjects && !this.doorMessageShown) {
+            this.doorMessageShown = true;
+            this.exit.setAlpha(1); // Make the exit visible
+            this.showDoorMessage(); // Show the message that the door has appeared
         }
     }
 
-
-
     // Modification de la fonction spawnEnemies
-    spawnEnemies() {
+    spawnEnemies(count) {
         let validCells = [];
         for (let x = 1; x < this.cols - 1; x++) {
             for (let y = 1; y < this.rows - 1; y++) {
@@ -151,7 +158,7 @@ class GameScene extends Phaser.Scene {
             }
         }
 
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < count; i++) {
             let pos = validCells.splice(Phaser.Math.Between(0, validCells.length - 1), 1)[0];
             if (pos) {
                 let enemy = this.physics.add.sprite(pos.x * this.cellSize + this.cellSize / 2, pos.y * this.cellSize + this.cellSize / 2, 'ennemie').setScale(0.06).setPipeline('Light2D');
@@ -173,8 +180,6 @@ class GameScene extends Phaser.Scene {
         }
         return positions;
     }
-
-
 
     moveEnemy(enemy) {
         const speed = 100;
@@ -202,19 +207,24 @@ class GameScene extends Phaser.Scene {
         this.physics.pause();
         player.setTint(0xff0000);
 
-        // Afficher le message "Vous êtes mort"
         const { width, height } = this.cameras.main;
         const deathText = this.add.text(width / 2, height / 2, 'Vous êtes mort', {
             font: '50px Arial',
             fill: '#ff0000'
-        }).setOrigin(0.5).setScrollFactor(0); // Pour qu'il reste fixe à l'écran
+        }).setOrigin(0.5).setScrollFactor(0);
 
-        // Effet de fondu (transition écran noir)
         this.cameras.main.fade(2000, 0, 0, 0);
 
-        // Après la transition, revenir au Menu
         this.time.delayedCall(2000, () => {
-            this.scene.start('MenuScene');
+            this.scene.stop('HudScene');
+            this.scene.stop('GameScene');
+
+            // Nettoyage complet
+            if (this.objects) this.objects.clear(true, true);
+            if (this.enemies) this.enemies.clear(true, true);
+
+            // Refresh complet de la page pour tout reset
+            window.location.reload();
         });
     }
 
@@ -241,8 +251,94 @@ class GameScene extends Phaser.Scene {
     collectObject(player, object) {
         object.destroy();
         this.collectedObjects++;
-        this.hudScene.updateObjectCount(this.collectedObjects, 5); // Update HUD with the correct count
+        this.hudScene.updateObjectCount(this.collectedObjects, this.totalObjects);
+
+        if (this.collectedObjects === this.totalObjects && !this.doorMessageShown) {
+            this.doorMessageShown = true;
+            this.exit.setAlpha(1); // Make the exit visible
+            this.showDoorMessage(); // Show the message that the door has appeared
+        }
+
     }
+
+
+    spawnRandomDoor() {
+        let pos = this.placeObjects(1)[0]; // Trouve un emplacement libre
+        this.door = this.physics.add.staticSprite(
+            pos.x * this.cellSize + this.cellSize / 2,
+            pos.y * this.cellSize + this.cellSize / 2,
+            'exit'
+        ).setScale(0.06).setPipeline('Light2D');
+
+        // Rendre la porte visible une fois apparue
+        this.door.setAlpha(1);
+
+        // Ajouter un overlap pour détecter quand le joueur touche la porte
+        this.physics.add.overlap(this.player, this.door, this.reachExit, null, this);
+    }
+
+    showDoorMessage() {
+        const { width, height } = this.cameras.main;
+        const message = this.add.text(width / 2, height / 2, 'Une porte est apparue!', {
+            font: '40px Arial',
+            fill: '#ffff00'
+        }).setOrigin(0.5).setScrollFactor(0);
+
+        this.time.delayedCall(2000, () => {
+            message.destroy(); // Supprime le message après 2 secondes
+        });
+    }
+
+
+
+
+    reachExit(player, exit) {
+        if (this.collectedObjects === this.totalObjects) {
+            this.physics.pause();
+            player.setTint(0x00ff00);
+
+            const { width, height } = this.cameras.main;
+            const winText = this.add.text(width / 2, height / 2, 'Vous avez gagné!', {
+                font: '50px Arial',
+                fill: '#00ff00'
+            }).setOrigin(0.5).setScrollFactor(0);
+
+            this.cameras.main.fade(2000, 0, 0, 0);
+
+            this.time.delayedCall(2000, () => {
+                this.scene.stop('HudScene');
+                this.scene.stop('GameScene');
+
+                // Nettoyage complet
+                if (this.objects) this.objects.clear(true, true);
+                if (this.enemies) this.enemies.clear(true, true);
+
+                this.scene.start('MenuScene');
+            });
+        }
+    }
+
+
+
+    winGame() {
+        this.physics.pause();
+        this.player.setTint(0x00ff00);
+
+        const { width, height } = this.cameras.main;
+        const winText = this.add.text(width / 2, height / 2, 'Vous avez gagné!', {
+            font: '50px Arial',
+            fill: '#00ff00'
+        }).setOrigin(0.5).setScrollFactor(0);
+
+        this.cameras.main.fade(2000, 0, 0, 0);
+
+        this.time.delayedCall(2000, () => {
+            this.scene.stop('HudScene');
+            this.scene.stop('GameScene');
+            this.scene.start('MenuScene');
+        });
+    }
+
 
 }
 class HudScene extends Phaser.Scene {
