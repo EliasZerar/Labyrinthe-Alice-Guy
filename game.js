@@ -29,9 +29,17 @@ class MenuScene extends Phaser.Scene {
             .setInteractive()
             .setOrigin(0.5)
             .on('pointerdown', () => this.quitGame());
+        
+            const fullscreenButton = this.add.text(width / 2, 700, 'Plein écran', { font: '30px Arial', fill: '#fff' })
+            .setInteractive()
+            .setOrigin(0.5)
+            .on('pointerdown', () => {
+                this.scale.toggleFullscreen();
+            });
+        
     }
-
 }
+
 
 class GameScene extends Phaser.Scene {
 
@@ -67,7 +75,10 @@ class GameScene extends Phaser.Scene {
         this.scene.launch('HudScene'); // Launch the HUD scene here
         this.hudScene = this.scene.get('HudScene'); // Reference to access it
         this.hudScene.reset();
-
+        this.input.keyboard.on('keydown-F', () => {
+            this.scale.toggleFullscreen();
+        });
+        
         const cols = 20, rows = 20, cellSize = 40;
         this.cols = cols;
         this.rows = rows;
@@ -509,6 +520,10 @@ const config = {
     physics: {
         default: 'arcade',
         arcade: { gravity: { y: 0 }, debug: false }
+    },
+    scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH
     },
     scene: [MenuScene, GameScene, InventoryScene, SettingsScene, HudScene] // Ajouter les scènes ici
 
