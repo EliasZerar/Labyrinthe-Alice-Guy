@@ -1,3 +1,41 @@
+class RulesScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'RulesScene' });
+    }
+
+    create() {
+        const { width, height } = this.sys.game.config;
+        this.cameras.main.setBackgroundColor('rgba(0, 0, 0, 0.8)'); // Fond semi-transparent
+
+        const rulesText = `
+            Règles du Jeu :
+            - Déplacez-vous avec les touches Z Q S D.
+            - Trouvez et ramassez tous les objets cachés.
+            - Évitez les ennemis.
+            - Une porte apparaîtra une fois tous les objets collectés.
+            - Atteignez la porte pour gagner !
+        `;
+
+        const text = this.add.text(width / 2, height / 3, rulesText, {
+            font: '20px Arial',
+            fill: '#ffffff',
+            align: 'center',
+            wordWrap: { width: 500 }
+        }).setOrigin(0.5);
+
+        const closeButton = this.add.text(width / 2, height - 100, 'Fermer', {
+            font: '30px Arial',
+            fill: '#ff0000',
+            backgroundColor: '#ffffff',
+            padding: { left: 10, right: 10, top: 5, bottom: 5 }
+        }).setOrigin(0.5).setInteractive();
+
+        closeButton.on('pointerdown', () => {
+            this.scene.start('MenuScene'); // Démarre le menu après la fermeture
+        });
+    }
+}
+
 class MenuScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MenuScene' });
@@ -55,6 +93,7 @@ class GameScene extends Phaser.Scene {
     init() {
         this.collectedObjects = 0; // Remise à zéro correcte
         localStorage.setItem('collectedObjects', JSON.stringify(this.collectedObjects));
+        localStorage.removeItem('collectedItems'); // Clear collectedItems from localStorage
 
         // Remise à zéro des groupes
         if (this.objects) this.objects.clear(true, true);
@@ -423,7 +462,6 @@ class InventoryScene extends Phaser.Scene {
         this.updateInventory(this.collectedItems);
     }
 
-
     updateInventory(collectedItems) {
         // Ensure collectedItems is an array
         if (!Array.isArray(collectedItems)) {
@@ -431,7 +469,11 @@ class InventoryScene extends Phaser.Scene {
         }
 
         // Supprimer les anciennes images d'objets
-        this.collectedItems.forEach(item => item.destroy());
+        this.collectedItems.forEach(item => {
+            if (item && item.destroy) {
+                item.destroy();
+            }
+        });
         this.collectedItems = [];
 
         let startX = 1150; // Position de départ en X
@@ -541,7 +583,7 @@ const config = {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH
     },
-    scene: [MenuScene, GameScene, InventoryScene, SettingsScene, HudScene] // Affiche les différentes 
+    scene: [RulesScene,MenuScene, GameScene, InventoryScene, SettingsScene, HudScene] // Affiche les différentes 
 
 };
 
