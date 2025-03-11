@@ -29,14 +29,14 @@ class MenuScene extends Phaser.Scene {
             .setInteractive()
             .setOrigin(0.5)
             .on('pointerdown', () => this.quitGame());
-        
-            const fullscreenButton = this.add.text(width / 2, 700, 'Plein écran', { font: '30px Arial', fill: '#fff' })
+
+        const fullscreenButton = this.add.text(width / 2, 700, 'Plein écran', { font: '30px Arial', fill: '#fff' })
             .setInteractive()
             .setOrigin(0.5)
             .on('pointerdown', () => {
                 this.scale.toggleFullscreen();
             });
-        
+
     }
 }
 
@@ -66,7 +66,11 @@ class GameScene extends Phaser.Scene {
     preload() {
         this.load.image('player', 'alice.png');
         this.load.image('wall', 'wall.jpg');
-        this.load.image('object', 'object.png');
+        this.load.image('object1', 'objet_labyrinthe/chronophone.png'); // Load different objects
+        this.load.image('object2', 'objet_labyrinthe/chou.png');
+        this.load.image('object3', 'objet_labyrinthe/camera.png');
+        this.load.image('object4', 'objet_labyrinthe/clé.png');
+        this.load.image('object5', 'objet_labyrinthe/parchemin.png');
         this.load.image('exit', 'exit.png');
         this.load.image('ennemie', 'goat.png');
     }
@@ -75,10 +79,16 @@ class GameScene extends Phaser.Scene {
         this.scene.launch('HudScene'); // Launch the HUD scene here
         this.hudScene = this.scene.get('HudScene'); // Reference to access it
         this.hudScene.reset();
+
+        // Always display the inventory
+        this.scene.launch('InventoryScene');
+        this.inventoryScene = this.scene.get('InventoryScene');
+        this.inventoryScene.updateInventory(this.collectedObjects);
+
         this.input.keyboard.on('keydown-F', () => {
             this.scale.toggleFullscreen();
         });
-        
+
         const cols = 20, rows = 20, cellSize = 40;
         this.cols = cols;
         this.rows = rows;
@@ -110,8 +120,10 @@ class GameScene extends Phaser.Scene {
         this.player = this.physics.add.sprite(cellSize, cellSize, 'player').setScale(0.7).setOrigin((-0.5)).setPipeline('Light2D');
         this.physics.add.collider(this.player, this.walls);
 
-        this.placeObjects(this.totalObjects).forEach(pos => {
-            this.objects.create(pos.x * cellSize + cellSize / 2, pos.y * cellSize + cellSize / 2, 'object').setScale(0.05).setPipeline('Light2D');
+        this.placeObjects(this.totalObjects).forEach((pos, index) => {
+            const objectType = index + 1; // Ensure unique object type
+            const object = this.objects.create(pos.x * cellSize + cellSize / 2, pos.y * cellSize + cellSize / 2, `object${objectType}`).setScale(0.1).setPipeline('Light2D');
+            object.setData('type', `object${objectType}`); // Store the object type
         });
 
         let exitPos = this.placeObjects(1)[0];
@@ -192,7 +204,6 @@ class GameScene extends Phaser.Scene {
         }
     }
 
-    // Modification de la fonction placeObjects
     placeObjects(count) {
         let positions = [];
         while (positions.length < count) {
@@ -281,19 +292,19 @@ class GameScene extends Phaser.Scene {
     }
 
     collectObject(player, object) {
+        const objectType = object.getData('type'); // Get the object type
         object.destroy();
         this.collectedObjects++;
 
         // Sauvegarder dans localStorage
-        localStorage.setItem('collectedObjects', JSON.stringify(this.collectedObjects));
+        let collectedItems = JSON.parse(localStorage.getItem('collectedItems')) || [];
+        collectedItems.push(objectType);
+        localStorage.setItem('collectedItems', JSON.stringify(collectedItems));
 
         this.hudScene.updateObjectCount(this.collectedObjects, this.totalObjects);
 
-        // Mettre à jour la scène d'inventaire si elle est active
-        const inventoryScene = this.scene.get('InventoryScene');
-        if (inventoryScene.scene.isActive()) {
-            inventoryScene.updateInventory(this.collectedObjects);
-        }
+        // Mettre à jour la scène d'inventaire
+        this.inventoryScene.updateInventory(collectedItems);
 
         if (this.collectedObjects === this.totalObjects && !this.doorMessageShown) {
             this.doorMessageShown = true;
@@ -301,6 +312,7 @@ class GameScene extends Phaser.Scene {
             this.showDoorMessage();
         }
     }
+
 
 
     spawnRandomDoor() {
@@ -390,17 +402,9 @@ class InventoryScene extends Phaser.Scene {
     }
 
     create() {
-        this.add.image(400, 300, 'background').setAlpha(0.8);
-
-        this.title = this.add.text(400, 50, 'Inventaire', {
-            fontSize: '32px',
-            fill: '#ffffff'
-        }).setOrigin(0.5);
-
-        this.itemsText = this.add.text(400, 100, 'Objets collectés : 0', {
-            fontSize: '24px',
-            fill: '#ffffff'
-        }).setOrigin(0.5);
+        const { width, height } = this.sys.game.config;
+        const background = this.add.image(width - 0, height / 2, 'background');
+        background.setDisplaySize(200, height);
 
         this.input.keyboard.on('keydown-ESC', () => {
             this.scene.setVisible(false);
@@ -413,28 +417,40 @@ class InventoryScene extends Phaser.Scene {
         });
 
         // Charger les objets collectés sauvegardés
-        const savedObjects = localStorage.getItem('collectedObjects');
-        this.collectedObjects = savedObjects ? JSON.parse(savedObjects) : 0;
+        const savedObjects = localStorage.getItem('collectedItems');
+        this.collectedItems = savedObjects ? JSON.parse(savedObjects) : [];
 
-        this.updateInventory(this.collectedObjects);
+        this.updateInventory(this.collectedItems);
     }
 
 
-    updateInventory(count) {
+    updateInventory(collectedItems) {
+        // Ensure collectedItems is an array
+        if (!Array.isArray(collectedItems)) {
+            collectedItems = [];
+        }
+
         // Supprimer les anciennes images d'objets
         this.collectedItems.forEach(item => item.destroy());
         this.collectedItems = [];
 
-        let startX = this.sys.game.config.width / 2 - 100;
-        let startY = this.sys.game.config.height / 2 - 40;
+        let startX = 1150; // Position de départ en X
+        let startY = 100; // Position de départ en Y
+        let itemSize = 10; // Taille des objets
+        let itemsPerRow = 1; // Nombre d'objets par ligne
+        let ySpacing = 80; // Espace en Y entre chaque objet
 
-        for (let i = 0; i < count; i++) {
-            let itemImage = this.add.image(startX + (i % 5) * 50, startY + Math.floor(i / 5) * 50, 'object').setScale(0.5);
+        collectedItems.forEach((objectType, i) => {
+            let itemImage = this.add.image(
+                startX + (i % itemsPerRow) * itemSize,
+                startY + Math.floor(i / itemsPerRow) * (itemSize + ySpacing),
+                objectType
+            ).setScale(0.3); // Ajuster l'échelle de l'objet
             this.collectedItems.push(itemImage);
-        }
+        });
 
         if (this.itemsText) {
-            this.itemsText.setText(`Objets collectés : ${count}`);
+            this.itemsText.setText(`Objets collectés : ${collectedItems.length}`);
         } else {
             console.error("itemsText is still null after attempting to create it.");
         }
@@ -525,7 +541,7 @@ const config = {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH
     },
-    scene: [MenuScene, GameScene, InventoryScene, SettingsScene, HudScene] // Ajouter les scènes ici
+    scene: [MenuScene, GameScene, InventoryScene, SettingsScene, HudScene] // Affiche les différentes 
 
 };
 
