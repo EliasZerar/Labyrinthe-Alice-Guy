@@ -41,37 +41,49 @@ class MenuScene extends Phaser.Scene {
 
     preload() {
         this.load.image('background', 'menu_background.jpg');
+        this.load.image('alice', 'alice.svg'); // Load the alice image
     }
 
     create() {
         const { width, height } = this.sys.game.config;
 
-        this.cameras.main.setBackgroundColor('#2c2c2a');
+        this.cameras.main.setBackgroundColor('#000000');
 
-        const title = this.add.text(width / 2, 200, 'Labyrinthe 2D', { font: '40px Arial', fill: '#ea5b28' });
+        const title = this.add.text(width / 2 + 30, 220, 'Labyrinthe 2D', { font: '40px Arial', fill: '#ea5b28' });
         title.setOrigin(0.5);
+
+        const aliceImage = this.add.image(width / 2 - 135, 200, 'alice').setScale(0.7); // Add alice image
+        aliceImage.setOrigin(0.5);
 
         const playButton = this.add.text(width / 2, 400, 'Jouer', { font: '30px Arial', fill: '#fff' })
             .setInteractive()
             .setOrigin(0.5)
-            .on('pointerdown', () => this.scene.start('GameScene'));
+            .on('pointerdown', () => this.scene.start('GameScene'))
+            .on('pointerover', () => playButton.setStyle({ fill: '#ea5b28' }))
+            .on('pointerout', () => playButton.setStyle({ fill: '#fff' }));
 
         const settingsButton = this.add.text(width / 2, 500, 'Paramètres', { font: '30px Arial', fill: '#fff' })
             .setInteractive()
             .setOrigin(0.5)
-            .on('pointerdown', () => this.scene.start('SettingsScene'));
+            .on('pointerdown', () => this.scene.start('SettingsScene'))
+            .on('pointerover', () => settingsButton.setStyle({ fill: '#ea5b28' }))
+            .on('pointerout', () => settingsButton.setStyle({ fill: '#fff' }));
 
         const quitButton = this.add.text(width / 2, 600, 'Quitter', { font: '30px Arial', fill: '#fff' })
             .setInteractive()
             .setOrigin(0.5)
-            .on('pointerdown', () => this.quitGame());
+            .on('pointerdown', () => this.quitGame())
+            .on('pointerover', () => quitButton.setStyle({ fill: '#ea5b28' }))
+            .on('pointerout', () => quitButton.setStyle({ fill: '#fff' }));
 
         const fullscreenButton = this.add.text(width / 2, 700, 'Plein écran', { font: '30px Arial', fill: '#fff' })
             .setInteractive()
             .setOrigin(0.5)
             .on('pointerdown', () => {
                 this.scale.toggleFullscreen();
-            });
+            })
+            .on('pointerover', () => fullscreenButton.setStyle({ fill: '#ea5b28' }))
+            .on('pointerout', () => fullscreenButton.setStyle({ fill: '#fff' }));
 
     }
 }
