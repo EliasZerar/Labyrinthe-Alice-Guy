@@ -10,17 +10,15 @@ class RulesScene extends Phaser.Scene {
         const rulesText = `
             Règles du Jeu :
             - Déplacez-vous avec les touches Z Q S D.
-            - Trouvez et ramassez tous les objets cachés.
+            - Trouvez et ramassez 5 objets cachés.
             - Évitez les ennemis.
             - Une porte apparaîtra une fois tous les objets collectés.
             - Atteignez la porte pour gagner !
         `;
 
         const text = this.add.text(width / 2, height / 3, rulesText, {
-            font: '20px Arial',
-            fill: '#ffffff',
-            align: 'center',
-            wordWrap: { width: 500 }
+            font: '30px Arial',
+            fill: '#00ff00',
         }).setOrigin(0.5);
 
         const closeButton = this.add.text(width / 2, height - 100, 'Fermer', {
@@ -85,7 +83,7 @@ class GameScene extends Phaser.Scene {
         super({ key: 'GameScene' });
         this.grid = [];
         this.collectedObjects = 0;
-        this.playerSpeed = 160;
+        this.playerSpeed = 130;
         this.totalObjects = 5;
         this.doorMessageShown = false;
     }
@@ -133,7 +131,16 @@ class GameScene extends Phaser.Scene {
         this.rows = rows;
         this.cellSize = cellSize;
 
-        this.keys = this.input.keyboard.addKeys(keyBindings);
+        this.keys = this.input.keyboard.addKeys({
+            up: Phaser.Input.Keyboard.KeyCodes.Z,
+            down: Phaser.Input.Keyboard.KeyCodes.S,
+            left: Phaser.Input.Keyboard.KeyCodes.Q,
+            right: Phaser.Input.Keyboard.KeyCodes.D,
+            upArrow: Phaser.Input.Keyboard.KeyCodes.UP,
+            downArrow: Phaser.Input.Keyboard.KeyCodes.DOWN,
+            leftArrow: Phaser.Input.Keyboard.KeyCodes.LEFT,
+            rightArrow: Phaser.Input.Keyboard.KeyCodes.RIGHT
+        });
 
         this.lights.enable().setAmbientColor(0x000000);
 
@@ -170,12 +177,12 @@ class GameScene extends Phaser.Scene {
         this.exit.body.setSize(cellSize, cellSize); // Set hitbox for the exit
         this.exit.setAlpha(0); // Make the exit invisible initially
 
-        this.spawnEnemies(10);
+        this.spawnEnemies(5);
 
         this.playerLight = this.lights.addLight(this.player.x, this.player.y, 150).setColor(0xffffff).setIntensity(1);
 
         this.cameras.main.startFollow(this.player);
-        this.cameras.main.setZoom(2);
+        this.cameras.main.setZoom(2.24);
         this.cameras.main.setBounds(0, 0, cols * cellSize, rows * cellSize);
 
         this.physics.add.overlap(this.player, this.objects, this.collectObject, null, this);
@@ -199,10 +206,10 @@ class GameScene extends Phaser.Scene {
     update() {
         this.player.setVelocity(0);
 
-        if (this.keys.left.isDown) this.player.setVelocityX(-this.playerSpeed);
-        if (this.keys.right.isDown) this.player.setVelocityX(this.playerSpeed);
-        if (this.keys.up.isDown) this.player.setVelocityY(-this.playerSpeed);
-        if (this.keys.down.isDown) this.player.setVelocityY(this.playerSpeed);
+        if (this.keys.left.isDown || this.keys.leftArrow.isDown) this.player.setVelocityX(-this.playerSpeed);
+        if (this.keys.right.isDown || this.keys.rightArrow.isDown) this.player.setVelocityX(this.playerSpeed);
+        if (this.keys.up.isDown || this.keys.upArrow.isDown) this.player.setVelocityY(-this.playerSpeed);
+        if (this.keys.down.isDown || this.keys.downArrow.isDown) this.player.setVelocityY(this.playerSpeed);
 
         this.playerLight.x = this.player.x;
         this.playerLight.y = this.player.y;
@@ -445,10 +452,7 @@ class InventoryScene extends Phaser.Scene {
         const background = this.add.image(width - 0, height / 2, 'background');
         background.setDisplaySize(200, height);
 
-        this.input.keyboard.on('keydown-ESC', () => {
-            this.scene.setVisible(false);
-            this.scene.resume('GameScene');
-        });
+
 
         this.input.keyboard.on('keydown-I', () => {
             this.scene.setVisible(false);
@@ -535,7 +539,7 @@ class SettingsScene extends Phaser.Scene {
     create() {
         const { width, height } = this.sys.game.config;
 
-        this.add.text(width / 2, 100, 'Paramètres - Configurer les touches', { font: '30px Arial', fill: '#fff' }).setOrigin(0.5);
+        this.add.text(width / 2, 100, 'Paramètres - Configurer les touches\nClique droit sur la touche + la touche de votre choix', { font: '30px Arial', fill: '#fff' }).setOrigin(0.5);
 
         let yPos = 200;
         Object.keys(keyBindings).forEach((action) => {
@@ -564,10 +568,10 @@ class SettingsScene extends Phaser.Scene {
     }
 }
 const keyBindings = {
-    up: 'Z',
-    down: 'S',
-    left: 'Q',
-    right: 'D'
+    up: ['Z', 'UP'],
+    down: ['S', 'DOWN'],
+    left: ['Q', 'LEFT'],
+    right: ['D', 'RIGHT']
 };
 
 const config = {
@@ -583,7 +587,7 @@ const config = {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH
     },
-    scene: [RulesScene,MenuScene, GameScene, InventoryScene, SettingsScene, HudScene] // Affiche les différentes 
+    scene: [RulesScene, MenuScene, GameScene, InventoryScene, SettingsScene, HudScene] // Affiche les différentes Scènes
 
 };
 
